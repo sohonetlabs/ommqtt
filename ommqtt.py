@@ -9,7 +9,7 @@
     in rsyslog.conf
 
     module(load="omprog")
-    action(type="omprog" binary="/home/foo/ommqtt/ommqtt.py --topic syslog/ --port 1883 ")
+    action(type="omprog" template="json_syslog" binary="/home/foo/ommqtt/ommqtt.py --topic syslog/ --port 1883 ")
 
 """
 

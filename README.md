@@ -9,7 +9,7 @@ example output
 
 ## install
 
-    pip install
+    pip install paho-mqtt
  
 or
 
@@ -83,7 +83,7 @@ Load the module to spawn our process
 
 add the action that will call our process with the template
 
-    action(type="omprog" template="json_syslog" binary="/home/test/ommqtt/ommqtt.py --topic test/syslog")
+    action(type="omprog" template="json_syslog" binary="/home/test/ommqtt/ommqtt.py --topic test/syslog --broker localhost")
 
 ## Thank you for the pointers
 

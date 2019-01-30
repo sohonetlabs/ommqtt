@@ -122,6 +122,10 @@ class MqttDestination(object):
         """
         decoded_msg = msg['MESSAGE'].decode('utf-8')
         try:
+            # might not have been able to connect there may be no route
+            # try again
+            if not self.is_opened():
+                self.open()
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
             # use the number not the string

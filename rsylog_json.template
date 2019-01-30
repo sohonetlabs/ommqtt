@@ -1,0 +1,22 @@
+
+template(name="json_syslog"
+  type="list") {
+    constant(value="{")
+      constant(value="\"@timestamp\":\"")       property(name="timereported" dateFormat="rfc3339")
+      constant(value="\",\"type\":\"syslog_json")
+      constant(value="\",\"tag\":\"")           property(name="syslogtag" format="json")
+      constant(value="\",\"relayhost\":\"")     property(name="fromhost")
+      constant(value="\",\"relayip\":\"")       property(name="fromhost-ip")
+      constant(value="\",\"logsource\":\"")     property(name="source")
+      constant(value="\",\"hostname\":\"")      property(name="hostname" caseconversion="lower")
+      constant(value="\",\"program\":\"")      property(name="programname")
+      constant(value="\",\"priority\":\"")      property(name="pri")
+      constant(value="\",\"severity\":\"")      property(name="syslogseverity")
+      constant(value="\",\"facility\":\"")      property(name="syslogfacility")
+      constant(value="\",\"severity_label\":\"")   property(name="syslogseverity-text")
+      constant(value="\",\"facility_label\":\"")   property(name="syslogfacility-text")
+      constant(value="\",\"message\":\"")       property(name="rawmsg" format="json")
+      constant(value="\",\"end_msg\":\"")
+    constant(value="\"}\n")
+}
+

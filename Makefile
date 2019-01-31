@@ -1,4 +1,3 @@
-
 run_ommqtt_system_tests:
 	echo '{"severity": "1"}' | python -m ommqtt.ommqtt
 	echo '{"severity": "2"}' | python -m ommqtt.ommqtt

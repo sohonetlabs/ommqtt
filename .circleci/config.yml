@@ -72,8 +72,6 @@ jobs:
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt
-            make install_app
-            make build_app
 
       - run:
           name: run mosquitto

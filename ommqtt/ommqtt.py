@@ -4,7 +4,7 @@
     Based off the skeleton plugin for rsyslog
     and
     https://github.com/czanik/syslog-ng-mqtt-dest/blob/master/mqtt_dest.py
-    
+
 
     in rsyslog.conf
 
@@ -13,12 +13,13 @@
 
 """
 
-import sys
-import select
 import argparse
 import json
+import logging
 import os
 import os.path
+import select
+import sys
 import syslog
 
 import paho.mqtt.client as mqtt
@@ -27,6 +28,8 @@ import paho.mqtt.client as mqtt
 mqqt_dest = None
 
 mqtt_options = None
+
+logger = logging.getLogger(__name__)
 
 
 class MqttDestination(object):
@@ -78,6 +81,7 @@ class MqttDestination(object):
                         self.mqttc.username_pw_set(creds["username"], creds["password"])
 
         except Exception as err:
+            logger.error("init error")
             syslog.syslog("Init exception" + str(err))
             return False
         return True
@@ -91,6 +95,7 @@ class MqttDestination(object):
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
+            logger.error("open error")
             syslog.syslog("Open exception " + str(err))
             self._is_opened = False
             return False
@@ -101,7 +106,7 @@ class MqttDestination(object):
         self._is_opened = False
 
     def send(self, msg):
-        decoded_msg = msg['MESSAGE'].decode('utf-8')
+        decoded_msg = msg["MESSAGE"]
         try:
             # might not have been able to connect there may be no route
             # try again
@@ -115,17 +120,23 @@ class MqttDestination(object):
             # as separate topics
             topic = self.topic
             try:
-                syslog = json.loads(decoded_msg)
-                sub_topic = syslog["severity"]
+                _syslog = json.loads(decoded_msg)
+                sub_topic = _syslog["severity"]
                 topic = self.topic + "/" + sub_topic
-                severity = int(syslog["severity"])
+                severity = int(_syslog["severity"])
+                # skip messages below severity threshold
+                if severity <= self.syslog_severity_threshold:
+                    message = self.mqttc.publish(topic, decoded_msg, qos=self.qos)
+                    message.wait_for_publish()
+                else:
+                    logger.debug("not sending message %s" % msg)
             except Exception as err:
+                logger.error("Could not send message %s" % msg)
                 syslog.syslog("Send format exception " + str(err))
                 pass
-            # skip messages below severity threshold
-            if severity <= self.syslog_severity_threshold:
-                self.mqttc.publish(topic, decoded_msg, qos=self.qos)
+
         except Exception as err:
+            logger.error("Could not send message %s" % msg)
             syslog.syslog("Send exception " + str(err))
             self._is_opened = False
             return False
@@ -163,6 +174,7 @@ def on_exit():
     global mqtt_dest
     mqtt_dest.close()
 
+
 """
 -------------------------------------------------------
 This is plumbing that DOES NOT need to be CHANGED
@@ -182,58 +194,58 @@ def main():
 
     parser = argparse.ArgumentParser(description="rsyslog plugin to send to MQTT broker")
 
-    parser.add_argument('-b', '--broker',
-                        help='MQTT broker',
-                        default='localhost',
+    parser.add_argument("-b", "--broker",
+                        help="MQTT broker",
+                        default="localhost",
                         required=False)
 
-    parser.add_argument('-p', '--port',
-                        help='MQTT broker port',
+    parser.add_argument("-p", "--port",
+                        help="MQTT broker port",
                         default=1883,
                         type=int,
                         required=False)
 
-    parser.add_argument('-t', '--topic',
-                        help='MQTT broker topic to post to',
-                        default='test/syslog',
+    parser.add_argument("-t", "--topic",
+                        help="MQTT broker topic to post to",
+                        default="test/syslog",
                         required=False)
 
-    parser.add_argument('-q', '--qos',
-                        help='MQTT qos',
+    parser.add_argument("-q", "--qos",
+                        help="MQTT qos",
                         default=2,
                         type=int,
                         required=False)
 
-    parser.add_argument('-s', '--severity',
-                        help='Maximium syslog severity to send',
+    parser.add_argument("-s", "--severity",
+                        help="Maximium syslog severity to send",
                         default=7,
                         type=int,
                         required=False)
 
-    parser.add_argument('-c', '--cert',
-                        help='path to cert for the MQTT broker',
+    parser.add_argument("-c", "--cert",
+                        help="path to cert for the MQTT broker",
                         default=None,
                         required=False)
 
-    parser.add_argument('-a', '--auth',
-                        help='path to auth for the MQTT broker',
+    parser.add_argument("-a", "--auth",
+                        help="path to auth for the MQTT broker",
                         default=None,
                         required=False)
 
-    parser.add_argument('-i', '--inflight',
-                        help='Maximium in flight messages for MQTT',
+    parser.add_argument("-i", "--inflight",
+                        help="Maximium in flight messages for MQTT",
                         default=100,
                         type=int,
                         required=False)
 
-    parser.add_argument('--poll',
-                        help='The number of seconds between polling for new messages from syslog',
+    parser.add_argument("--poll",
+                        help="The number of seconds between polling for new messages from syslog",
                         default=0.75,
                         type=float,
                         required=False)
 
-    parser.add_argument('-m', '--messages',
-                        help='Max number of messages that are processed within one batch from syslog',
+    parser.add_argument("-m", "--messages",
+                        help="Max number of messages that are processed within one batch from syslog",
                         default=100,
                         type=int,
                         required=False)
@@ -242,18 +254,18 @@ def main():
 
     global mqtt_options
     mqtt_options = {
-                    "host": getattr(args, 'broker'),
-                    "port": getattr(args, 'port'),
-                    "topic": getattr(args, 'topic'),
-                    "qos": getattr(args, 'qos'),
-                    "severity": getattr(args, 'severity'),
-                    "cert_path": getattr(args, 'cert'),
-                    "auth_path": getattr(args, 'auth'),
-                    "inflight_max": getattr(args, 'inflight'),
+                    "host": getattr(args, "broker"),
+                    "port": getattr(args, "port"),
+                    "topic": getattr(args, "topic"),
+                    "qos": getattr(args, "qos"),
+                    "severity": getattr(args, "severity"),
+                    "cert_path": getattr(args, "cert"),
+                    "auth_path": getattr(args, "auth"),
+                    "inflight_max": getattr(args, "inflight"),
                     "debug": 0}
 
-    poll_period = getattr(args, 'poll')
-    max_at_once = getattr(args, 'messages')
+    poll_period = getattr(args, "poll")
+    max_at_once = getattr(args, "messages")
 
     syslog.syslog("OMMQTT start up poll={} messages={}".format(poll_period, max_at_once))
     on_init()
@@ -276,5 +288,6 @@ def main():
                 sys.stdout.flush()  # very important, Python buffers far too much!
     on_exit()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

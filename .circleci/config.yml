@@ -1,0 +1,115 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+
+  unit_tests:
+    docker:
+      # specify the version you desire here
+      - image: circleci/python:3.6.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements/requirements.txt" }}-{{ checksum "daemons/test.txt" }}
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -r requirements/requirements.txt
+            pip install -r requirements/test.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements/requirements.txt" }}-{{ checksum "daemons/test.txt" }}
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            pytest tests/
+            coverage report --fail-under=100
+            flake8 code/ daemons/ tests/
+            isort --check-only --diff --recursive code tests
+            unify --check-only --recursive --quote \" code tests
+
+      - store_artifacts:
+          path: htmlcov/
+          destination: test-reports
+
+  system_tests:
+    docker:
+      # specify the version you desire here
+      - image: circleci/python:3.6.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements/requirements.txt" }}-{{ checksum "daemons/test.txt" }}
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install mosquitto
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -r requirements/requirements.txt
+            pip install -r requirements/test.txt
+            make install_app
+            make build_app
+
+      - run:
+          name: run mosquitto
+          background: true
+          command: |
+            mosquitto
+
+      - run:
+          name: run mosquitto listener
+          background: true
+          command: |
+            sleep 5
+            mosquitto_sub -t "#" -v -W 10 > mosquitto.txt
+
+      - run:
+          name: run ommqtt tests
+          command: |
+            sleep 10
+            make run_ommqtt_system_tests
+
+      - run:
+          name: tests
+          command: |
+            sleep 30
+            . venv/bin/activate
+            make check_ommqtt_system_tests
+
+      - save_cache:
+          name: Save Python Package Cache
+          key: v1-dependencies-{{ checksum "requirements/requirements.txt" }}-{{ checksum "daemons/test.txt" }}
+          paths:
+            - ./venv
+
+workflows:
+  version: 2
+  test_unit_and_system:
+    jobs:
+      - unit_tests
+      - system_tests

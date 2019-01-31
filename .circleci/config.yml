@@ -90,6 +90,7 @@ jobs:
           name: run ommqtt tests
           command: |
             sleep 10
+            . venv/bin/activate
             make run_ommqtt_system_tests
 
       - run:

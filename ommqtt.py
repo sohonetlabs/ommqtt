@@ -88,6 +88,7 @@ class MqttDestination(object):
     def open(self):
         try:
             self.mqttc.connect(self.host, self.port)
+            #starts a background thread that calls loop and handles reconnection
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
@@ -102,10 +103,7 @@ class MqttDestination(object):
 
     def send(self, msg):
         decoded_msg = msg['MESSAGE'].decode('utf-8')
-        try:
-            # might not have been able to connect there may be no route
-            # try again
-            self.mqttc.reconnect()
+        try:            
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
             # use the number not the string
@@ -115,10 +113,10 @@ class MqttDestination(object):
             # as separate topics
             topic = self.topic
             try:
-                syslog = json.loads(decoded_msg)
-                sub_topic = syslog["severity"]
+                syslog_msg = json.loads(decoded_msg)
+                sub_topic = syslog_msg["severity"]
                 topic = self.topic + "/" + sub_topic
-                severity = int(syslog["severity"])
+                severity = int(syslog_msg["severity"])
             except Exception as err:
                 syslog.syslog("Send format exception " + str(err))
                 pass

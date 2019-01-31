@@ -132,7 +132,7 @@ class MqttDestination(object):
         return True
 
 
-def onInit():
+def on_init():
     global mqtt_dest
     global mqtt_options
 
@@ -142,7 +142,7 @@ def onInit():
     syslog.syslog("OMMQTT init")
 
 
-def onReceive(msgs):
+def on_receive(msgs):
     """This is the entry point where actual work needs to be done. It receives
        a list with all messages pulled from rsyslog. The list is of variable
        length, but contains all messages that are currently available. It is
@@ -155,7 +155,7 @@ def onReceive(msgs):
         mqtt_dest.send({"MESSAGE": msg})
 
 
-def onExit():
+def on_exit():
     """ Do everything that is needed to finish processing (e.g.
         close files, handles, disconnect from systems...). This is
         being called immediately before exiting.
@@ -234,7 +234,7 @@ def main():
 
     parser.add_argument('-m', '--messages',
                         help='Max number of messages that are processed within one batch from syslog',
-                        default=1024,
+                        default=100,
                         type=int,
                         required=False)
 
@@ -252,28 +252,29 @@ def main():
                     "inflight_max": getattr(args, 'inflight'),
                     "debug": 0}
 
-    pollPeriod = getattr(args, 'poll')
-    maxAtOnce = getattr(args, 'messages')
+    poll_period = getattr(args, 'poll')
+    max_at_once = getattr(args, 'messages')
 
-    onInit()
-    keepRunning = 1
-    while keepRunning == 1:
-        while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
+    syslog.syslog("OMMQTT start up poll={} messages={}".format(poll_period, max_at_once))
+    on_init()
+    keep_running = 1
+    while keep_running == 1:
+        while keep_running and sys.stdin in select.select([sys.stdin], [], [], poll_period)[0]:
             msgs = []
-            msgsInBatch = 0
-            while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            msgs_in_batch = 0
+            while keep_running and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
                 line = sys.stdin.readline()
                 if line:
                     msgs.append(line)
                 else:  # an empty line means stdin has been closed
-                    keepRunning = 0
-                msgsInBatch = msgsInBatch + 1
-                if msgsInBatch >= maxAtOnce:
+                    keep_running = 0
+                msgs_in_batch = msgs_in_batch + 1
+                if msgs_in_batch >= max_at_once:
                     break
             if len(msgs) > 0:
-                onReceive(msgs)
+                on_receive(msgs)
                 sys.stdout.flush()  # very important, Python buffers far too much!
-    onExit()
+    on_exit()
 
 if __name__ == '__main__':
     main()

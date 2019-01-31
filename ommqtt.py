@@ -19,28 +19,17 @@ import argparse
 import json
 import os
 import os.path
+import syslog
 
 import paho.mqtt.client as mqtt
-
-# skeleton config parameters
-pollPeriod = 0.75  # the number of seconds between polling for new messages
-maxAtOnce = 1024  # max nbr of messages that are processed within one batch
 
 # App logic global variables
 mqqt_dest = None
 
 mqtt_options = None
 
-"""
-Use "pip install paho-mqtt" or install the relevant package from your distro
-host, port and topic are mandatory parameters
-"""
-
 
 class MqttDestination(object):
-    """
-    the MqttDestination class, from 
-    """
 
     def __init__(self):
         self.host = None
@@ -67,10 +56,12 @@ class MqttDestination(object):
             self.syslog_severity_threshold = int(options["severity"])
             cert_path = options["cert_path"]
             auth_path = options["auth_path"]
+            inflight = options["inflight_max"]
+            self.mqttc.max_inflight_messages_set(inflight)
 
             if cert_path:
                 if not os.path.exists(cert_path):
-                    print("Invalid cert path " + cert_path)
+                    syslog.syslog("Invalid cert path " + cert_path)
                     exit(0)
                 else:
                     self.mqttc.tls_set(
@@ -79,7 +70,7 @@ class MqttDestination(object):
                                 )
             if auth_path:
                 if not os.path.exists(auth_path):
-                    print("Invalid auth path " + auth_path)
+                    syslog.syslog("Invalid auth path " + auth_path)
                     exit(0)
                 else:
                     with open(auth_path, "r") as f:
@@ -87,45 +78,34 @@ class MqttDestination(object):
                         self.mqttc.username_pw_set(creds["username"], creds["password"])
 
         except Exception as err:
-            print(err)
+            syslog.syslog("Init exception" + str(err))
             return False
         return True
 
     def is_opened(self):
-        """Checks if destination is available"""
         return self._is_opened
 
     def open(self):
-        """
-        opens connection to the MQTT server and starts the loop
-        """
         try:
             self.mqttc.connect(self.host, self.port)
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
-            print(err)
+            syslog.syslog("Open exception " + str(err))
             self._is_opened = False
             return False
         return True
 
     def close(self):
-        """
-        closes the connection
-        """
         self.mqttc.disconnect()
         self._is_opened = False
 
     def send(self, msg):
-        """
-        sends the message
-        """
         decoded_msg = msg['MESSAGE'].decode('utf-8')
         try:
             # might not have been able to connect there may be no route
             # try again
-            if not self.is_opened():
-                self.open()
+            self.mqttc.reconnect()
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
             # use the number not the string
@@ -140,27 +120,26 @@ class MqttDestination(object):
                 topic = self.topic + "/" + sub_topic
                 severity = int(syslog["severity"])
             except Exception as err:
+                syslog.syslog("Send format exception " + str(err))
                 pass
             # skip messages below severity threshold
             if severity <= self.syslog_severity_threshold:
                 self.mqttc.publish(topic, decoded_msg, qos=self.qos)
         except Exception as err:
-            print(err)
+            syslog.syslog("Send exception " + str(err))
             self._is_opened = False
             return False
         return True
 
 
 def onInit():
-    """ Do everything that is needed to initialize processing (e.g.
-        open files, create handles, connect to systems...)
-    """
     global mqtt_dest
     global mqtt_options
 
     mqtt_dest = MqttDestination()
     mqtt_dest.init(mqtt_options)
     mqtt_dest.open()
+    syslog.syslog("OMMQTT init")
 
 
 def onReceive(msgs):
@@ -201,18 +180,18 @@ See also: https://github.com/rsyslog/rsyslog/issues/22
 
 def main():
 
-    parser = argparse.ArgumentParser(description="rsyslog plugin to send send to mqtt")
+    parser = argparse.ArgumentParser(description="rsyslog plugin to send to MQTT broker")
 
     parser.add_argument('-b', '--broker',
-                       help='MQTT broker',
-                       default='localhost',
-                       required=False)
+                        help='MQTT broker',
+                        default='localhost',
+                        required=False)
 
     parser.add_argument('-p', '--port',
-                          help='MQTT broker port',
-                          default=1883,
-                          type=int,
-                          required=False)
+                        help='MQTT broker port',
+                        default=1883,
+                        type=int,
+                        required=False)
 
     parser.add_argument('-t', '--topic',
                         help='MQTT broker topic to post to',
@@ -226,19 +205,37 @@ def main():
                         required=False)
 
     parser.add_argument('-s', '--severity',
-                        help='Maximium severity to send',
+                        help='Maximium syslog severity to send',
                         default=7,
                         type=int,
                         required=False)
 
     parser.add_argument('-c', '--cert',
-                        help='path to cert for the mqtt broker',
+                        help='path to cert for the MQTT broker',
                         default=None,
                         required=False)
 
     parser.add_argument('-a', '--auth',
-                        help='path to auth for the mqtt broker',
+                        help='path to auth for the MQTT broker',
                         default=None,
+                        required=False)
+
+    parser.add_argument('-i', '--inflight',
+                        help='Maximium in flight messages for MQTT',
+                        default=100,
+                        type=int,
+                        required=False)
+
+    parser.add_argument('--poll',
+                        help='The number of seconds between polling for new messages from syslog',
+                        default=0.75,
+                        type=float,
+                        required=False)
+
+    parser.add_argument('-m', '--messages',
+                        help='Max number of messages that are processed within one batch from syslog',
+                        default=1024,
+                        type=int,
                         required=False)
 
     args = parser.parse_args()
@@ -252,7 +249,11 @@ def main():
                     "severity": getattr(args, 'severity'),
                     "cert_path": getattr(args, 'cert'),
                     "auth_path": getattr(args, 'auth'),
+                    "inflight_max": getattr(args, 'inflight'),
                     "debug": 0}
+
+    pollPeriod = getattr(args, 'poll')
+    maxAtOnce = getattr(args, 'messages')
 
     onInit()
     keepRunning = 1

@@ -7,9 +7,14 @@ example output
     test/syslog/5 {"@timestamp":"2019-01-30T15:04:45.830071+00:00","type":"syslog_json","tag":"sohonet:","relayhost":"testhost","relayip":"127.0.0.1","logsource":"testhost","hostname":"testhost","program":"logger","priority":"13","severity":"5","facility":"1","severity_label":"notice","facility_label":"user","message":"<13>Jan 30 15:04:45 logger: Hello Log","end_msg":""}
 
 
-## install
+## Note
 
-    pip install paho-mqtt
+Messages will get dropped until the network interface is up and running, and connection to MQTT broker is made
+
+## install
+You will need this lib in your system python, or setup a virtualenv to run it
+
+    sudo pip install paho-mqtt
  
 or
 
@@ -28,9 +33,9 @@ ommqtt.py needs to be owned by whatever rsyslog is runnign as ( syslog ) and exe
 Uses the topic as the base topic and appends the severity label to the end.
 
     usage: ommqtt.py [-h] [-b BROKER] [-p PORT] [-t TOPIC] [-q QOS] [-s SEVERITY]
-                     [-c CERT] [-a AUTH]
+                     [-c CERT] [-a AUTH] [-i INFLIGHT] [--poll POLL] [-m MESSAGES]
 
-    rsyslog plugin to send send to mqtt
+    rsyslog plugin to send to MQTT broker
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -41,9 +46,16 @@ Uses the topic as the base topic and appends the severity label to the end.
                             MQTT broker topic to post to
       -q QOS, --qos QOS     MQTT qos
       -s SEVERITY, --severity SEVERITY
-                            Maximium severity to send
-      -c CERT, --cert CERT  path to cert for the mqtt broker
-      -a AUTH, --auth AUTH  path to auth for the mqtt broker
+                            Maximium syslog severity to send
+      -c CERT, --cert CERT  path to cert for the MQTT broker
+      -a AUTH, --auth AUTH  path to auth for the MQTT broker
+      -i INFLIGHT, --inflight INFLIGHT
+                            Maximium in flight messages for MQTT
+      --poll POLL           The number of seconds between polling for new messages
+                            from syslog
+      -m MESSAGES, --messages MESSAGES
+                            Max number of messages that are processed within one
+                            batch from syslog
       
 ## debugging
 
@@ -89,7 +101,6 @@ add the action that will call our process with the template
 
 [http://certifiedgeek.weebly.com/blog/rsyslog-json-format-template](http://certifiedgeek.weebly.com/blog/rsyslog-json-format-template)
 
-[https://www.syslog-ng.com/community/b/blog/posts/writing-python-destination-in-syslog-ng-how-to-send-log-messages-to-mqtt](
-https://www.syslog-ng.com/community/b/blog/posts/writing-python-destination-in-syslog-ng-how-to-send-log-messages-to-mqtt)
+[https://www.syslog-ng.com/community/b/blog/posts/writing-python-destination-in-syslog-ng-how-to-send-log-messages-to-mqtt](https://www.syslog-ng.com/community/b/blog/posts/writing-python-destination-in-syslog-ng-how-to-send-log-messages-to-mqtt)
 
 [https://github.com/kgiusti/rsyslog-omamqp1/tree/master/external/python](https://github.com/kgiusti/rsyslog-omamqp1/tree/master/external/python)

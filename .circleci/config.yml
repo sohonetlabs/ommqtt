@@ -83,21 +83,16 @@ jobs:
           name: run mosquitto listener
           background: true
           command: |
-            sleep 5
-            mosquitto_sub -t "#" -v -W 30 > mosquitto.txt
+            sleep 2
+            mosquitto_sub -t "#" -v > mosquitto.txt
 
       - run:
           name: run ommqtt tests
           command: |
-            sleep 10
+            sleep 5
             . venv/bin/activate
             make run_ommqtt_system_tests
-
-      - run:
-          name: tests
-          command: |
-            sleep 40
-            . venv/bin/activate
+            sleep 1
             make check_ommqtt_system_tests
 
       - save_cache:

@@ -84,7 +84,7 @@ jobs:
           background: true
           command: |
             sleep 5
-            mosquitto_sub -t "#" -v -W 10 > mosquitto.txt
+            mosquitto_sub -t "#" -v -W 30 > mosquitto.txt
 
       - run:
           name: run ommqtt tests
@@ -96,7 +96,7 @@ jobs:
       - run:
           name: tests
           command: |
-            sleep 30
+            sleep 40
             . venv/bin/activate
             make check_ommqtt_system_tests
 

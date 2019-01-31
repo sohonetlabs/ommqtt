@@ -38,7 +38,7 @@ class MqttDestination(object):
         self._is_opened = False
         self.debug = 0
         self.qos = 0
-        self.mqttc = mqtt.Client("rs_mqtt")
+        self.mqttc = mqtt.Client()
         self.cert_path = None
         self.auth_path = None
         self.syslog_severity_threshold = 7

@@ -7,6 +7,7 @@ run_ommqtt_system_tests:
 	echo '{"severity": "6"}' | python -m ommqtt.ommqtt
 
 check_ommqtt_system_tests:
+	cat mosquitto.txt
 	grep "test/syslog/1" mosquitto.txt
 	grep "test/syslog/2" mosquitto.txt
 	grep "test/syslog/3" mosquitto.txt

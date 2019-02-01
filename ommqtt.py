@@ -103,7 +103,7 @@ class MqttDestination(object):
 
     def send(self, msg):
         decoded_msg = msg['MESSAGE'].decode('utf-8')
-        try:            
+        try:
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
             # use the number not the string
@@ -112,6 +112,7 @@ class MqttDestination(object):
             # /syslog/6
             # as separate topics
             topic = self.topic
+            severity = 7
             try:
                 syslog_msg = json.loads(decoded_msg)
                 sub_topic = syslog_msg["severity"]
@@ -119,10 +120,11 @@ class MqttDestination(object):
                 severity = int(syslog_msg["severity"])
             except Exception as err:
                 syslog.syslog("Send format exception " + str(err))
-                pass
+                return False
             # skip messages below severity threshold
             if severity <= self.syslog_severity_threshold:
-                self.mqttc.publish(topic, decoded_msg, qos=self.qos)
+                message = self.mqttc.publish(topic, decoded_msg, qos=self.qos)
+                message.wait_for_publish()
         except Exception as err:
             syslog.syslog("Send exception " + str(err))
             self._is_opened = False

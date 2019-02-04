@@ -125,7 +125,7 @@ class MqttDestination(object):
                 topic = self.topic + "/" + sub_topic
                 severity = int(syslog_msg["severity"])
             except Exception as err:
-                logger.exception("Could not send message %s" % msg)
+                logger.exception("Send format exception %s" % msg)
                 syslog.syslog("Send format exception " + str(err))
                 return False
             # skip messages below severity threshold

@@ -34,57 +34,54 @@ logger = logging.getLogger(__name__)
 
 class MqttDestination(object):
 
-    def __init__(self):
-        self.host = None
-        self.port = None
-        self.topic = None
-        self._is_opened = False
-        self.debug = 0
-        self.qos = 0
-        self.mqttc = mqtt.Client()
-        self.cert_path = None
-        self.auth_path = None
-        self.syslog_severity_threshold = 7
-
-    def init(self, options):
+    def __init__(self, host, port, topic, **options):
 
         try:
-            self.host = options["host"]
-            self.port = int(options["port"])
-            self.topic = options["topic"]
-            if "debug" in options:
-                self.debug = int(options["debug"])
-            if "qos" in options:
-                self.qos = int(options["qos"])
-            self.syslog_severity_threshold = int(options["severity"])
-            cert_path = options["cert_path"]
-            auth_path = options["auth_path"]
-            inflight = options["inflight_max"]
-            self.mqttc.max_inflight_messages_set(inflight)
+            self.port = int(port)
+        except ValueError as err:
+            logger.error("init error")
+            syslog.syslog("Init exception " + str(err))
+            raise
 
-            if cert_path:
-                if not os.path.exists(cert_path):
-                    syslog.syslog("Invalid cert path " + cert_path)
-                    exit(0)
+        self.host = host
+        self.topic = topic
+        self.debug = int(options.get("debug", 0))
+        self.qos = int(options.get("qos", 0))
+        self.cert_path = options.get("cert_path")
+        self.auth_path = options.get("auth_path")
+        self.syslog_severity_threshold = int(options.get("severity", 7))
+        self.inflight = options.get("inflight_max")
+
+        self._is_opened = False
+        self.mqttc = mqtt.Client()
+
+        if self.inflight:
+            self.mqttc.max_inflight_messages_set(self.inflight)
+
+        try:
+            if self.cert_path:
+                if not os.path.exists(self.cert_path):
+                    syslog.syslog("Invalid cert path " + self.cert_path)
+                    sys.exit(0)
                 else:
                     self.mqttc.tls_set(
-                                tls_version=2,
-                                ca_certs=cert_path
-                                )
-            if auth_path:
-                if not os.path.exists(auth_path):
-                    syslog.syslog("Invalid auth path " + auth_path)
-                    exit(0)
+                        tls_version=2, ca_certs=self.cert_path
+                    )
+            if self.auth_path:
+                if not os.path.exists(self.auth_path):
+                    syslog.syslog("Invalid auth path " + self.auth_path)
+                    sys.exit(0)
                 else:
-                    with open(auth_path, "r") as f:
+                    with open(self.auth_path, "r") as f:
                         creds = json.load(f)
-                        self.mqttc.username_pw_set(creds["username"], creds["password"])
+                        self.mqttc.username_pw_set(
+                            creds["username"], creds["password"]
+                        )
 
         except Exception as err:
             logger.error("init error")
-            syslog.syslog("Init exception" + str(err))
-            return False
-        return True
+            syslog.syslog("Init exception " + str(err))
+            raise
 
     def is_opened(self):
         return self._is_opened
@@ -92,7 +89,7 @@ class MqttDestination(object):
     def open(self):
         try:
             self.mqttc.connect(self.host, self.port)
-            #starts a background thread that calls loop and handles reconnection
+            # starts a background thread that calls loop and handles reconnection
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
@@ -107,7 +104,11 @@ class MqttDestination(object):
         self._is_opened = False
 
     def send(self, msg):
-        decoded_msg = msg['MESSAGE'].decode('utf-8')
+
+        if isinstance(msg["MESSAGE"], str):
+            decoded_msg = msg["MESSAGE"]
+        else:
+            decoded_msg = msg["MESSAGE"].decode("utf-8")
         try:
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
@@ -124,7 +125,7 @@ class MqttDestination(object):
                 topic = self.topic + "/" + sub_topic
                 severity = int(syslog_msg["severity"])
             except Exception as err:
-                logger.error("Could not send message %s" % msg)
+                logger.exception("Could not send message %s" % msg)
                 syslog.syslog("Send format exception " + str(err))
                 return False
             # skip messages below severity threshold
@@ -132,7 +133,7 @@ class MqttDestination(object):
                 message = self.mqttc.publish(topic, decoded_msg, qos=self.qos)
                 message.wait_for_publish()
         except Exception as err:
-            logger.error("Could not send message %s" % msg)
+            logger.exception("Could not send message %s" % msg)
             syslog.syslog("Send exception " + str(err))
             self._is_opened = False
             return False
@@ -143,8 +144,13 @@ def on_init():
     global mqtt_dest
     global mqtt_options
 
-    mqtt_dest = MqttDestination()
-    mqtt_dest.init(mqtt_options)
+    host = mqtt_options.pop("host")
+    port = mqtt_options.pop("port")
+    topic = mqtt_options.pop("topic")
+
+    mqtt_dest = MqttDestination(
+        host, port, topic, **mqtt_options
+    )
     mqtt_dest.open()
     syslog.syslog("OMMQTT init")
 
@@ -285,5 +291,5 @@ def main():
     on_exit()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

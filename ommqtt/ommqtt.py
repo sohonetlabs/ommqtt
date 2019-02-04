@@ -39,7 +39,7 @@ class MqttDestination(object):
         try:
             self.port = int(port)
         except ValueError as err:
-            logger.error("init error")
+            logger.exception("init error")
             syslog.syslog("Init exception " + str(err))
             raise
 
@@ -79,7 +79,7 @@ class MqttDestination(object):
                         )
 
         except Exception as err:
-            logger.error("init error")
+            logger.exception("init error")
             syslog.syslog("Init exception " + str(err))
             raise
 
@@ -93,7 +93,7 @@ class MqttDestination(object):
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
-            logger.error("open error")
+            logger.exception("open error")
             syslog.syslog("Open exception " + str(err))
             self._is_opened = False
             return False

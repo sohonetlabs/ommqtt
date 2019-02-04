@@ -1,8 +1,0 @@
-[flake8]
-exclude =
-  code/calls/migrations/
-  code/machines/migrations/
-  code/users/migrations/
-  code/routes/migrations/
-  code/mosquittoauth/migrations/
-  fabfile.py

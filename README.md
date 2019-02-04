@@ -1,5 +1,5 @@
 # OMMQTT output module for rsyslog using MQTT
-    
+
 rsyslog plugin that sends logs via mqtt in json format
 
 example output
@@ -15,7 +15,7 @@ Messages will get dropped until the network interface is up and running, and con
 You will need this lib in your system python, or setup a virtualenv to run it
 
     sudo pip install paho-mqtt
- 
+
 or
 
     sudo apt install python-paho-mqtt
@@ -26,7 +26,7 @@ ommqtt.py needs to be owned by whatever rsyslog is runnign as ( syslog ) and exe
 
     chmod +x ommqtt.py
     sudo chown syslog:syslog ommqtt.py
-    
+
 
 ## usage
 
@@ -56,17 +56,17 @@ Uses the topic as the base topic and appends the severity label to the end.
       -m MESSAGES, --messages MESSAGES
                             Max number of messages that are processed within one
                             batch from syslog
-      
+
 ## debugging
 
-Install Mosquitto on your local system and subscribe to the topic as a wild card 
+Install Mosquitto on your local system and subscribe to the topic as a wild card
 
      mosquitto_sub -v -h localhost -t test/syslog/#
 
 ## rsyslog config
 
 add this template to /etc/rsyslog.conf
-    
+
     template(name="json_syslog"
       type="list") {
         constant(value="{")
@@ -87,7 +87,7 @@ add this template to /etc/rsyslog.conf
           constant(value="\",\"end_msg\":\"")
         constant(value="\"}\n")
     }
-    
+
 
 Load the module to spawn our process
 
@@ -96,6 +96,43 @@ Load the module to spawn our process
 add the action that will call our process with the template
 
     action(type="omprog" template="json_syslog" binary="/home/test/ommqtt/ommqtt.py --topic test/syslog --broker localhost")
+
+
+## Development
+
+### Setup
+
+    mkvirtualenv -p python3
+    pip install pip-tools
+
+### Install python requirements
+
+    make sync_requirements
+
+### Run tests
+
+    pytest tests
+
+### Run system tests    
+
+    make run_ommqtt_system_tests
+
+### Check system test output
+
+    make check_ommqtt_system_tests
+
+### Compile new requirements (after adding to requirements/)
+
+    make compile_requirements
+
+### Run linting
+
+    make lint
+
+### Fix linting errors
+
+    make fix_lint
+
 
 ## Thank you for the pointers
 

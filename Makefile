@@ -24,9 +24,9 @@ sync_requirements:
 
 lint:
 	flake8 ommqtt/ tests/
-	isort --check-only --diff --recursive ommqtt/
-	unify --check-only --recursive --quote \" ommqtt/
+	isort --check-only --diff --recursive ommqtt/ tests/
+	unify --check-only --recursive --quote \" ommqtt/ tests/
 
 fix_lint:
-	isort -y --recursive ommqtt/
-	unify --in-place --recursive --quote \" ommqtt/
+	isort -y --recursive ommqtt/ tests/
+	unify --in-place --recursive --quote \" ommqtt/ tests/

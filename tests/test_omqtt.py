@@ -1,10 +1,11 @@
+import json
+import sys
 from unittest import mock
 
-from ommqtt.ommqtt import MqttDestination, on_init, on_receive, on_exit, main
-from ommqtt import ommqtt
-import sys
 import pytest
-import json
+
+from ommqtt import ommqtt
+from ommqtt.ommqtt import MqttDestination, main, on_exit, on_init, on_receive
 
 
 def test_MqttDestination():
@@ -76,11 +77,11 @@ def test_MqttDestination_init(
     ]
     if cert_path:
         expected_mock_calls.append(
-            mock.call.tls_set(ca_certs='cert_path', tls_version=2)
+            mock.call.tls_set(ca_certs="cert_path", tls_version=2)
         )
     if auth_path:
         expected_mock_calls.append(
-            mock.call.username_pw_set('username', 'password')
+            mock.call.username_pw_set("username", "password")
         )
 
     assert mqttdestination.mqttc.mock_calls == expected_mock_calls
@@ -101,7 +102,7 @@ def test_MqttDestination_init__no_cert_path(mocker):
         MqttDestination("host", "100", "topic", **options)
 
     assert syslog.syslog.mock_calls == [
-        mock.call('Invalid cert path cert_path')
+        mock.call("Invalid cert path cert_path")
     ]
 
 
@@ -122,7 +123,7 @@ def test_MqttDestination_init__no_auth_path(
         MqttDestination("host", "100", "topic", **options)
 
     assert syslog.syslog.mock_calls == [
-        mock.call('Invalid auth path auth_path')
+        mock.call("Invalid auth path auth_path")
     ]
 
 
@@ -189,7 +190,7 @@ def test_MqttDestination_open_Exception(mocker):
         mock.call.connect("host", 100),
     ]
     assert syslog.syslog.mock_calls == [
-        mock.call('Open exception test connect exception')
+        mock.call("Open exception test connect exception")
     ]
 
 
@@ -215,7 +216,7 @@ def test_MqttDestination_send(msgdata, encode, mocker):
 
     message = msgdata["MESSAGE"]
     if encode:
-        mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode('utf-8')})
+        mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     else:
         mqttdestination.send({"MESSAGE": json.dumps(msgdata)})
 
@@ -232,7 +233,7 @@ def test_MqttDestination_send_msg_level_too_high(mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
     msgdata = {"severity": "8", "MESSAGE": "message8"}
-    mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode('utf-8')})
+    mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
 
     # make sure message is not sent
     assert mqttdestination.mqttc.mock_calls == []
@@ -291,7 +292,7 @@ def test_on_init(mocker):
     on_init()
     assert ommqtt.mqtt_dest is MqttDestination.return_value
     assert MqttDestination.mock_calls == [
-        mock.call('broker', 'port', 'topic'),
+        mock.call("broker", "port", "topic"),
         mock.call().open()
     ]
     assert syslog.mock_calls == [mock.call.syslog("OMMQTT init")]
@@ -318,20 +319,20 @@ def test_on_exit():
 
 def test_main_single_messages(mocker):
     stdout = mocker.patch(
-        'ommqtt.ommqtt.sys.stdout',
+        "ommqtt.ommqtt.sys.stdout",
     )
     mocker.patch(
-        'ommqtt.ommqtt.sys.stdin',
+        "ommqtt.ommqtt.sys.stdin",
         readline=mock.Mock(
             side_effect=[
-                'message1',
-                'message2',
-                ''
+                "message1",
+                "message2",
+                ""
             ]
         )
     )
     mocker.patch(
-        'ommqtt.ommqtt.select.select',
+        "ommqtt.ommqtt.select.select",
         return_value=[[sys.stdin]]
     )
 
@@ -348,27 +349,27 @@ def test_main_single_messages(mocker):
         poll = 1
 
     mocker.patch(
-        'ommqtt.ommqtt.argparse.ArgumentParser',
+        "ommqtt.ommqtt.argparse.ArgumentParser",
         return_value=mock.Mock(
             parse_args=mock.Mock(
                 return_value=Args
             )
         )
     )
-    syslog = mocker.patch('ommqtt.ommqtt.syslog')
-    on_init = mocker.patch('ommqtt.ommqtt.on_init')
-    on_receive = mocker.patch('ommqtt.ommqtt.on_receive')
-    on_exit = mocker.patch('ommqtt.ommqtt.on_exit')
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
 
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog('OMMQTT start up poll=1 messages=1')
+        mock.call.syslog("OMMQTT start up poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
-        mock.call(['message1']),
-        mock.call(['message2'])
+        mock.call(["message1"]),
+        mock.call(["message2"])
     ]
     assert on_exit.mock_calls == [mock.call()]
     assert stdout.flush.mock_calls == [
@@ -378,23 +379,23 @@ def test_main_single_messages(mocker):
 
 def test_main_multiple_messages(mocker):
     stdout = mocker.patch(
-        'ommqtt.ommqtt.sys.stdout',
+        "ommqtt.ommqtt.sys.stdout",
     )
     mocker.patch(
-        'ommqtt.ommqtt.sys.stdin',
+        "ommqtt.ommqtt.sys.stdin",
         readline=mock.Mock(
             side_effect=[
-                'message1',
-                'message2',
-                'message3',
-                'message4',
-                'message5',
-                ''
+                "message1",
+                "message2",
+                "message3",
+                "message4",
+                "message5",
+                ""
             ]
         )
     )
     mocker.patch(
-        'ommqtt.ommqtt.select.select',
+        "ommqtt.ommqtt.select.select",
         return_value=[[sys.stdin]]
     )
 
@@ -411,28 +412,28 @@ def test_main_multiple_messages(mocker):
         poll = 1
 
     mocker.patch(
-        'ommqtt.ommqtt.argparse.ArgumentParser',
+        "ommqtt.ommqtt.argparse.ArgumentParser",
         return_value=mock.Mock(
             parse_args=mock.Mock(
                 return_value=Args
             )
         )
     )
-    syslog = mocker.patch('ommqtt.ommqtt.syslog')
-    on_init = mocker.patch('ommqtt.ommqtt.on_init')
-    on_receive = mocker.patch('ommqtt.ommqtt.on_receive')
-    on_exit = mocker.patch('ommqtt.ommqtt.on_exit')
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
 
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog('OMMQTT start up poll=1 messages=2')
+        mock.call.syslog("OMMQTT start up poll=1 messages=2")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
-        mock.call(['message1', 'message2']),
-        mock.call(['message3', 'message4']),
-        mock.call(['message5'])
+        mock.call(["message1", "message2"]),
+        mock.call(["message3", "message4"]),
+        mock.call(["message5"])
     ]
     assert on_exit.mock_calls == [mock.call()]
     assert stdout.flush.mock_calls == [
@@ -442,16 +443,16 @@ def test_main_multiple_messages(mocker):
 
 def test_main_no_messages(mocker):
     stdout = mocker.patch(
-        'ommqtt.ommqtt.sys.stdout',
+        "ommqtt.ommqtt.sys.stdout",
     )
     mocker.patch(
-        'ommqtt.ommqtt.sys.stdin',
+        "ommqtt.ommqtt.sys.stdin",
         readline=mock.Mock(
-            return_value=''
+            return_value=""
         )
     )
     mocker.patch(
-        'ommqtt.ommqtt.select.select',
+        "ommqtt.ommqtt.select.select",
         return_value=[[sys.stdin]]
     )
 
@@ -468,22 +469,22 @@ def test_main_no_messages(mocker):
         poll = 1
 
     mocker.patch(
-        'ommqtt.ommqtt.argparse.ArgumentParser',
+        "ommqtt.ommqtt.argparse.ArgumentParser",
         return_value=mock.Mock(
             parse_args=mock.Mock(
                 return_value=Args
             )
         )
     )
-    syslog = mocker.patch('ommqtt.ommqtt.syslog')
-    on_init = mocker.patch('ommqtt.ommqtt.on_init')
-    on_receive = mocker.patch('ommqtt.ommqtt.on_receive')
-    on_exit = mocker.patch('ommqtt.ommqtt.on_exit')
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
 
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog('OMMQTT start up poll=1 messages=1')
+        mock.call.syslog("OMMQTT start up poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == []
@@ -493,15 +494,15 @@ def test_main_no_messages(mocker):
 
 def test_main_no_stdin(mocker):
     mocker.patch(
-        'ommqtt.ommqtt.sys.stdin',
+        "ommqtt.ommqtt.sys.stdin",
         readline=mock.Mock(
             side_effect=[
-                ''
+                ""
             ]
         )
     )
     mocker.patch(
-        'ommqtt.ommqtt.select.select',
+        "ommqtt.ommqtt.select.select",
         side_effect=[
             [[sys.stdin]],
             [[]],
@@ -523,20 +524,20 @@ def test_main_no_stdin(mocker):
         poll = 1
 
     mocker.patch(
-        'ommqtt.ommqtt.argparse.ArgumentParser',
+        "ommqtt.ommqtt.argparse.ArgumentParser",
         return_value=mock.Mock(
             parse_args=mock.Mock(
                 return_value=Args
             )
         )
     )
-    syslog = mocker.patch('ommqtt.ommqtt.syslog')
-    mocker.patch('ommqtt.ommqtt.on_init')
-    mocker.patch('ommqtt.ommqtt.on_receive')
-    mocker.patch('ommqtt.ommqtt.on_exit')
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    mocker.patch("ommqtt.ommqtt.on_init")
+    mocker.patch("ommqtt.ommqtt.on_receive")
+    mocker.patch("ommqtt.ommqtt.on_exit")
 
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog('OMMQTT start up poll=1 messages=1')
+        mock.call.syslog("OMMQTT start up poll=1 messages=1")
     ]

@@ -19,6 +19,7 @@ import logging
 import os
 import os.path
 import select
+import socket
 import sys
 import syslog
 
@@ -92,6 +93,7 @@ class MqttDestination(object):
     def open(self):
         try:
             self.mqttc.connect(self.host, self.port)
+            self.mqttc.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
@@ -108,9 +110,6 @@ class MqttDestination(object):
     def send(self, msg):
         decoded_msg = msg["MESSAGE"]
         try:
-            # might not have been able to connect there may be no route
-            # try again
-            self.mqttc.reconnect()
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
             # use the number not the string

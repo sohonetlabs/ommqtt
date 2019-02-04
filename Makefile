@@ -23,7 +23,7 @@ sync_requirements:
 	pip-sync requirements/requirements.txt requirements/test.txt --force
 
 lint:
-	flake8 ommqtt/
+	flake8 ommqtt/ tests/
 	isort --check-only --diff --recursive ommqtt/
 	unify --check-only --recursive --quote \" ommqtt/
 

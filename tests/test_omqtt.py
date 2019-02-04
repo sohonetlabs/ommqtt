@@ -500,7 +500,7 @@ def test_main_no_stdin(mocker):
             ]
         )
     )
-    select = mocker.patch(
+    mocker.patch(
         'ommqtt.ommqtt.select.select',
         side_effect=[
             [[sys.stdin]],
@@ -540,6 +540,3 @@ def test_main_no_stdin(mocker):
     assert syslog.mock_calls == [
         mock.call.syslog('OMMQTT start up poll=1 messages=1')
     ]
-
-    #assert select.mock_calls == []
-    #assert False

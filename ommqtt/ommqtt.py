@@ -19,7 +19,6 @@ import logging
 import os
 import os.path
 import select
-import socket
 import sys
 import syslog
 
@@ -42,7 +41,7 @@ class MqttDestination(object):
         self._is_opened = False
         self.debug = 0
         self.qos = 0
-        self.mqttc = mqtt.Client("rs_mqtt")
+        self.mqttc = mqtt.Client()
         self.cert_path = None
         self.auth_path = None
         self.syslog_severity_threshold = 7
@@ -93,7 +92,6 @@ class MqttDestination(object):
     def open(self):
         try:
             self.mqttc.connect(self.host, self.port)
-            self.mqttc.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:
@@ -108,7 +106,7 @@ class MqttDestination(object):
         self._is_opened = False
 
     def send(self, msg):
-        decoded_msg = msg["MESSAGE"]
+        decoded_msg = msg['MESSAGE'].decode('utf-8')
         try:
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
@@ -118,22 +116,20 @@ class MqttDestination(object):
             # /syslog/6
             # as separate topics
             topic = self.topic
+            severity = 7
             try:
-                _syslog = json.loads(decoded_msg)
-                sub_topic = _syslog["severity"]
+                syslog_msg = json.loads(decoded_msg)
+                sub_topic = syslog_msg["severity"]
                 topic = self.topic + "/" + sub_topic
-                severity = int(_syslog["severity"])
-                # skip messages below severity threshold
-                if severity <= self.syslog_severity_threshold:
-                    message = self.mqttc.publish(topic, decoded_msg, qos=self.qos)
-                    message.wait_for_publish()
-                else:
-                    logger.debug("not sending message %s" % msg)
+                severity = int(syslog_msg["severity"])
             except Exception as err:
                 logger.error("Could not send message %s" % msg)
                 syslog.syslog("Send format exception " + str(err))
-                pass
-
+                return False
+            # skip messages below severity threshold
+            if severity <= self.syslog_severity_threshold:
+                message = self.mqttc.publish(topic, decoded_msg, qos=self.qos)
+                message.wait_for_publish()
         except Exception as err:
             logger.error("Could not send message %s" % msg)
             syslog.syslog("Send exception " + str(err))

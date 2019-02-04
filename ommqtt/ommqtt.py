@@ -92,6 +92,7 @@ class MqttDestination(object):
     def open(self):
         try:
             self.mqttc.connect(self.host, self.port)
+            #starts a background thread that calls loop and handles reconnection
             self.mqttc.loop_start()
             self._is_opened = True
         except Exception as err:

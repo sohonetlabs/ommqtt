@@ -1,11 +1,16 @@
 import json
 import sys
-from unittest import mock
 
 import pytest
+import six
 
 from ommqtt import ommqtt
 from ommqtt.ommqtt import MqttDestination, main, on_exit, on_init, on_receive
+
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 
 def test_MqttDestination():
@@ -58,7 +63,8 @@ def test_MqttDestination_init(
 
     auth_data = json.dumps({"username": "username", "password": "password"})
     mock_open_data = mock.mock_open(read_data=auth_data)
-    with mock.patch("builtins.open", mock_open_data):
+    _open = "builtins.open" if six.PY3 else "__builtin__.open"
+    with mock.patch(_open, mock_open_data):
         mqttdestination = MqttDestination("host", "100", "topic", **options)
 
     assert mqttdestination.host == "host"
@@ -207,8 +213,8 @@ def test_MqttDestination_close(mocker):
 
 
 @pytest.mark.parametrize("msgdata, encode", [
-    ({"severity": "1", "MESSAGE": "str_message"}, False),
-    ({"severity": "1", "MESSAGE": "byte_message"}, True)
+    ({"MESSAGE": "str_message", "severity": "1"}, False),
+    ({"MESSAGE": "byte_message", "severity": "1"}, True)
 ])
 def test_MqttDestination_send(msgdata, encode, mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
@@ -219,11 +225,11 @@ def test_MqttDestination_send(msgdata, encode, mocker):
     if encode:
         mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     else:
-        mqttdestination.send({"MESSAGE": json.dumps(msgdata)})
+        mqttdestination.send({"MESSAGE": six.text_type(json.dumps(msgdata))})
 
     assert mqttdestination.mqttc.mock_calls == [
         mock.call.publish(
-            "topic/1", '{"severity": "1", "MESSAGE": "%s"}' % message,
+            "topic/1", '{"MESSAGE": "%s", "severity": "1"}' % message,
             qos=0
         ),
         mock.call.publish().wait_for_publish()
@@ -253,12 +259,20 @@ def test_MqttDestination_send_bad_json(mocker):
 
     # make sure message is not sent
     assert mqttdestination.mqttc.mock_calls == []
-    assert syslog.syslog.mock_calls == [
-        mock.call(
-            "Send format exception Expecting property name enclosed "
-            "in double quotes: line 1 column 2 (char 1)"
-        )
-    ]
+    if six.PY3:
+        assert syslog.syslog.mock_calls == [
+            mock.call(
+                "Send format exception Expecting property name enclosed "
+                "in double quotes: line 1 column 2 (char 1)"
+            )
+        ]
+    else:
+        assert syslog.syslog.mock_calls == [
+            mock.call(
+                "Send format exception Expecting object: "
+                "line 1 column 1 (char 0)"
+            )
+        ]
 
 
 def test_MqttDestination_send_bad_publish(mocker):

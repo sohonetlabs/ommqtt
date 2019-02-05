@@ -2,7 +2,6 @@ import json
 import sys
 from unittest import mock
 
-
 import pytest
 
 from ommqtt import ommqtt

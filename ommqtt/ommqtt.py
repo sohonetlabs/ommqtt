@@ -104,7 +104,6 @@ class MqttDestination(object):
         self._is_opened = False
 
     def send(self, msg):
-
         if isinstance(msg["MESSAGE"], str):
             decoded_msg = msg["MESSAGE"]
         else:

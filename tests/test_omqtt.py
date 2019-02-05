@@ -224,7 +224,7 @@ def test_MqttDestination_send(msgdata, encode, mocker):
     if encode:
         mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     else:
-        mqttdestination.send({"MESSAGE": json.dumps(msgdata)})
+        mqttdestination.send({"MESSAGE": six.text_type(json.dumps(msgdata))})
 
     assert mqttdestination.mqttc.mock_calls == [
         mock.call.publish(

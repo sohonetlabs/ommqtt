@@ -265,6 +265,7 @@ def test_MqttDestination_send_bad_publish(mocker):
     syslog = mocker.patch("ommqtt.ommqtt.syslog")
 
     mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination._is_opened = True
     mqttdestination.mqttc = mock.Mock(
         publish=mock.Mock(
             side_effect=Exception("test publish exception")

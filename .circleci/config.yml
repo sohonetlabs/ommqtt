@@ -22,8 +22,8 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum ".PYTHON_VERSION" }}-{{ checksum "requirements/requirements.txt" }}-{{ checksum "requirements/test.txt" }}
-          - v1-dependencies-
+          - v2-dependencies-{{ checksum ".PYTHON_VERSION" }}-{{ checksum "requirements/requirements.txt" }}-{{ checksum "requirements/test.txt" }}
+          - v2-dependencies-
 
       - run:
           name: install dependencies
@@ -36,7 +36,7 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum ".PYTHON_VERSION" }}-{{ checksum "requirements/requirements.txt" }}-{{ checksum "requirements/test.txt" }}
+          key: v2-dependencies-{{ checksum ".PYTHON_VERSION" }}-{{ checksum "requirements/requirements.txt" }}-{{ checksum "requirements/test.txt" }}
 
       - run:
           name: run tests

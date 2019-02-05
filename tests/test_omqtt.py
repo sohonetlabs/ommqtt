@@ -2,6 +2,7 @@ import json
 import sys
 from unittest import mock
 
+
 import pytest
 
 from ommqtt import ommqtt
@@ -282,6 +283,17 @@ def test_MqttDestination_send_bad_publish(mocker):
             "Send exception test publish exception"
         )
     ]
+
+def test_MqttDestination_send_is_closed(mocker):
+    mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = False
+    msgdata = {"severity": "1", "MESSAGE": "message8"}
+    #check fail to send
+    assert not mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
+
+    # make sure message is not sent
+    assert mqttdestination.mqttc.mock_calls == []
 
 
 def test_on_init(mocker):

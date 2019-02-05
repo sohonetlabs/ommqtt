@@ -213,6 +213,7 @@ def test_MqttDestination_close(mocker):
 def test_MqttDestination_send(msgdata, encode, mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = True
 
     message = msgdata["MESSAGE"]
     if encode:
@@ -233,6 +234,7 @@ def test_MqttDestination_send_msg_level_too_high(mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
     msgdata = {"severity": "8", "MESSAGE": "message8"}
+    mqttdestination._is_opened = True
     mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
 
     # make sure message is not sent
@@ -244,6 +246,7 @@ def test_MqttDestination_send_bad_json(mocker):
 
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = True
     assert not mqttdestination.send(
         {"MESSAGE": "{"}
     )
@@ -347,6 +350,7 @@ def test_main_single_messages(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -410,6 +414,7 @@ def test_main_multiple_messages(mocker):
         inflight = 10
         messages = 2
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -467,6 +472,7 @@ def test_main_no_messages(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -522,6 +528,7 @@ def test_main_no_stdin(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",

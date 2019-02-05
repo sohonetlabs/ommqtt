@@ -24,7 +24,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            python -m venv venv
+            python -m venv venv || virtualenv ven
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt
@@ -71,7 +71,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install mosquitto mosquitto-clients
-            python -m venv venv
+            python -m venv venv || virtualenv ven
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt

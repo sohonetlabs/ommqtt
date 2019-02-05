@@ -298,6 +298,20 @@ def test_MqttDestination_send_is_closed(mocker):
     assert mqttdestination.mqttc.mock_calls == []
 
 
+def test_MqttDestination_send_is_closed_but_does_open(mocker):
+    mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = False
+    msgdata = {"severity": "1", "MESSAGE": "message8"}
+    mqttdestination.open = lambda: True
+
+    assert not mqttdestination.open()
+    #check send
+    assert mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
+    # make sure message is not sent
+    assert mqttdestination.mqttc.mock_calls == []
+
+
 def test_on_init(mocker):
     MqttDestination = mocker.patch("ommqtt.ommqtt.MqttDestination")
     syslog = mocker.patch("ommqtt.ommqtt.syslog")

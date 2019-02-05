@@ -5,7 +5,7 @@
 version: 2
 jobs:
 
-  unit_tests:
+  unit_tests-3.6: &test-template
     docker:
       # specify the version you desire here
       - image: circleci/python:3.6.4
@@ -24,7 +24,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            python3 -m venv venv
+            python -m venv venv
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt
@@ -46,6 +46,11 @@ jobs:
           path: htmlcov/
           destination: test-reports
 
+  unit_tests-2.7:
+    <<: *test-template
+    docker:
+      - image: circleci/python:2.7
+
   system_tests:
     docker:
       # specify the version you desire here
@@ -66,7 +71,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get install mosquitto mosquitto-clients
-            python3 -m venv venv
+            python -m venv venv
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt
@@ -103,5 +108,6 @@ workflows:
   version: 2
   test_unit_and_system:
     jobs:
-      - unit_tests
+      - unit_tests-3.6
+      - unit_tests-2.7
       - system_tests

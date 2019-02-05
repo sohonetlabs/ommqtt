@@ -284,15 +284,15 @@ def test_MqttDestination_send_bad_publish(mocker):
         )
     ]
 
+
 def test_MqttDestination_send_is_closed(mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
     mqttdestination._is_opened = False
     msgdata = {"severity": "1", "MESSAGE": "message8"}
     mqttdestination.open = lambda: False
-    
     assert not mqttdestination.open()
-    #check fail to send
+    # check fail to send
     assert not mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     # make sure message is not sent
     assert mqttdestination.mqttc.mock_calls == []
@@ -304,9 +304,8 @@ def test_MqttDestination_send_is_closed_but_does_open(mocker):
     mqttdestination._is_opened = False
     msgdata = {"severity": "1", "MESSAGE": "message8"}
     mqttdestination.open = lambda: True
-
     assert mqttdestination.open()
-    #check send
+    # check send
     assert mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
 
 

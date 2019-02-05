@@ -305,7 +305,7 @@ def test_MqttDestination_send_is_closed_but_does_open(mocker):
     msgdata = {"severity": "1", "MESSAGE": "message8"}
     mqttdestination.open = lambda: True
 
-    assert not mqttdestination.open()
+    assert mqttdestination.open()
     #check send
     assert mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     # make sure message is not sent

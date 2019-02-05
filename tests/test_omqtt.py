@@ -213,6 +213,7 @@ def test_MqttDestination_close(mocker):
 def test_MqttDestination_send(msgdata, encode, mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = True
 
     message = msgdata["MESSAGE"]
     if encode:
@@ -233,6 +234,7 @@ def test_MqttDestination_send_msg_level_too_high(mocker):
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
     msgdata = {"severity": "8", "MESSAGE": "message8"}
+    mqttdestination._is_opened = True
     mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
 
     # make sure message is not sent
@@ -244,6 +246,7 @@ def test_MqttDestination_send_bad_json(mocker):
 
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = True
     assert not mqttdestination.send(
         {"MESSAGE": "{"}
     )
@@ -262,6 +265,7 @@ def test_MqttDestination_send_bad_publish(mocker):
     syslog = mocker.patch("ommqtt.ommqtt.syslog")
 
     mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination._is_opened = True
     mqttdestination.mqttc = mock.Mock(
         publish=mock.Mock(
             side_effect=Exception("test publish exception")
@@ -278,6 +282,30 @@ def test_MqttDestination_send_bad_publish(mocker):
             "Send exception test publish exception"
         )
     ]
+
+
+def test_MqttDestination_send_is_closed(mocker):
+    mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = False
+    msgdata = {"severity": "1", "MESSAGE": "message8"}
+    mqttdestination.open = lambda: False
+    assert not mqttdestination.open()
+    # check fail to send
+    assert not mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
+    # make sure message is not sent
+    assert mqttdestination.mqttc.mock_calls == []
+
+
+def test_MqttDestination_send_is_closed_but_does_open(mocker):
+    mqttdestination = MqttDestination("host", "100", "topic")
+    mqttdestination.mqttc = mock.Mock()
+    mqttdestination._is_opened = False
+    msgdata = {"severity": "1", "MESSAGE": "message8"}
+    mqttdestination.open = lambda: True
+    assert mqttdestination.open()
+    # check send
+    assert mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
 
 
 def test_on_init(mocker):
@@ -347,6 +375,7 @@ def test_main_single_messages(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -410,6 +439,7 @@ def test_main_multiple_messages(mocker):
         inflight = 10
         messages = 2
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -467,6 +497,7 @@ def test_main_no_messages(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",
@@ -522,6 +553,7 @@ def test_main_no_stdin(mocker):
         inflight = 10
         messages = 1
         poll = 1
+        openwait = 2
 
     mocker.patch(
         "ommqtt.ommqtt.argparse.ArgumentParser",

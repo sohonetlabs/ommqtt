@@ -107,7 +107,7 @@ class MqttDestination(object):
     def send(self, msg):
         # need to cope with case where we cannot connect to broker
         # we might be booting and unable to send the message yet
-        if not self_is_opened:
+        if not self._is_opened:
             if not self.open():
                 # sleep to give the network a chance to come up.
                 time.sleep(self.open_wait)

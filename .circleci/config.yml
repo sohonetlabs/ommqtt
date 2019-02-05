@@ -24,7 +24,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            python -m venv venv || virtualenv ven
+            python -m venv venv || virtualenv venv
             . venv/bin/activate
             pip install -r requirements/requirements.txt
             pip install -r requirements/test.txt

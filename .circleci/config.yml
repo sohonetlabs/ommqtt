@@ -15,6 +15,10 @@ jobs:
     steps:
       - checkout
 
+      - run: # test what branch we're on.
+          name: "What PYTHON_VERSION am I using?"
+          command: echo ${PYTHON_VERSION}
+
       # Download and cache dependencies
       - restore_cache:
           keys:

@@ -51,7 +51,7 @@ class MqttDestination(object):
         self.auth_path = options.get("auth_path")
         self.syslog_severity_threshold = int(options.get("severity", 7))
         self.inflight = options.get("inflight_max")
-        self.open_wait = int(opetions.get("open_wait", 2))
+        self.open_wait = int(options.get("open_wait", 2))
 
         self._is_opened = False
         self.mqttc = mqtt.Client()

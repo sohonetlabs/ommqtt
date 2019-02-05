@@ -308,8 +308,6 @@ def test_MqttDestination_send_is_closed_but_does_open(mocker):
     assert mqttdestination.open()
     #check send
     assert mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
-    # make sure message is not sent
-    assert mqttdestination.mqttc.mock_calls == []
 
 
 def test_on_init(mocker):

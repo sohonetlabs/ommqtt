@@ -51,6 +51,7 @@ class MqttDestination(object):
         self.auth_path = options.get("auth_path")
         self.syslog_severity_threshold = int(options.get("severity", 7))
         self.inflight = options.get("inflight_max")
+        self.open_wait = int(opetions.get("open_wait", 2))
 
         self._is_opened = False
         self.mqttc = mqtt.Client()
@@ -104,6 +105,13 @@ class MqttDestination(object):
         self._is_opened = False
 
     def send(self, msg):
+        # need to cope with case where we cannot connect to broker
+        # we might be booting and unable to send the message yet
+        if not self_is_opened:
+            if not self.open():
+                # sleep to give the network a chance to come up.
+                time.sleep(self.open_wait)
+                return False
 
         if isinstance(msg["MESSAGE"], str):
             decoded_msg = msg["MESSAGE"]
@@ -175,7 +183,6 @@ def on_exit():
     """
     global mqtt_dest
     mqtt_dest.close()
-
 
 """
 -------------------------------------------------------
@@ -252,6 +259,12 @@ def main():
                         type=int,
                         required=False)
 
+    parser.add_argument("-w", "--openwait",
+                        help="Time in seconds to wait if open fails,( usually network is not up yet)",
+                        default=2,
+                        type=int,
+                        required=False)
+
     args = parser.parse_args()
 
     global mqtt_options
@@ -264,6 +277,7 @@ def main():
                     "cert_path": getattr(args, "cert"),
                     "auth_path": getattr(args, "auth"),
                     "inflight_max": getattr(args, "inflight"),
+                    "open_wait": getattr(args, "openwait"),
                     "debug": 0}
 
     poll_period = getattr(args, "poll")

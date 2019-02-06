@@ -673,6 +673,10 @@ def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mock
     }
 
     assert syslog.mock_calls == [
+        mock.call.syslog(
+            "OMMQTT warning You have specified both a username:password "
+            "in the url AND an auth file, auth file auth_path will be ignored"
+        ),
         mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
@@ -686,7 +690,7 @@ def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mock
     ]
     assert logger.warning.mock_calls == [
         mock.call(
-            "You have specified both a username:password "
+            "OMMQTT warning You have specified both a username:password "
             "in the url AND an auth file, "
             "auth file auth_path will be ignored"
         )

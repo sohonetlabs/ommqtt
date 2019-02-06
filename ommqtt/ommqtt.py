@@ -305,11 +305,14 @@ def main():
             username = mosquitto_url.username
             password = mosquitto_url.password
             if getattr(args, "auth"):
-                logger.warning(
+                warn = (
+                    "OMMQTT warning "
                     "You have specified both a username:password "
                     "in the url AND an auth file, auth file %s "
                     "will be ignored" % getattr(args, "auth")
                 )
+                syslog.syslog(warn)
+                logger.warning(warn)
     else:
         host = host if host else "localhost"
         port = port if port else 1883

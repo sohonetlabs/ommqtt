@@ -14,8 +14,8 @@ check_ommqtt_system_tests:
 	grep "test/syslog/2" mosquitto.txt
 	grep "test/syslog/3" mosquitto.txt
 	grep "test/syslog/4" mosquitto.txt
-	grep "test_topic/syslog/5" mosquitto.txt
-	grep "test_topic/subtopic/syslog/6" mosquitto.txt
+	grep "test_topic/5" mosquitto.txt
+	grep "test_topic/subtopic/6" mosquitto.txt
 	grep -v "test/syslog/8" mosquitto.txt
 
 compile_requirements:

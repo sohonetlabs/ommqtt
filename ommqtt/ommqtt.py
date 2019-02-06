@@ -24,6 +24,13 @@ import syslog
 import time
 
 import paho.mqtt.client as mqtt
+import six
+
+if six.PY3:  # pragma: no cover
+    from urllib.parse import urlparse   # pragma: no cover
+else:
+    from urllib2 import urlparse as urlparse_lib  # pragma: no cover
+    urlparse = urlparse_lib.urlparse  # pragma: no cover
 
 # App logic global variables
 mqqt_dest = None
@@ -45,6 +52,8 @@ class MqttDestination(object):
             raise
 
         self.host = host
+        self.username = options.get("username")
+        self.password = options.get("password")
         self.topic = topic
         self.debug = int(options.get("debug", 0))
         self.qos = int(options.get("qos", 0))
@@ -69,7 +78,11 @@ class MqttDestination(object):
                     self.mqttc.tls_set(
                         tls_version=2, ca_certs=self.cert_path
                     )
-            if self.auth_path:
+            if self.username and self.password:
+                self.mqttc.username_pw_set(
+                    self.username, self.password
+                )
+            elif self.auth_path:
                 if not os.path.exists(self.auth_path):
                     syslog.syslog("Invalid auth path " + self.auth_path)
                     sys.exit(0)
@@ -116,9 +129,9 @@ class MqttDestination(object):
                 return False
 
         if isinstance(msg["MESSAGE"], str):
-            decoded_msg = msg["MESSAGE"]
+            decoded_msg = msg["MESSAGE"].strip()
         else:
-            decoded_msg = msg["MESSAGE"].decode("utf-8")
+            decoded_msg = msg["MESSAGE"].decode("utf-8").strip()
         try:
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
@@ -206,14 +219,19 @@ def main():
 
     parser = argparse.ArgumentParser(description="rsyslog plugin to send to MQTT broker")
 
+    parser.add_argument("-u", "--url",
+                        help="MQTT broker url (mqtts://user:password@host:8883)",
+                        default=None,
+                        required=False)
+
     parser.add_argument("-b", "--broker",
                         help="MQTT broker",
-                        default="localhost",
+                        default=None,
                         required=False)
 
     parser.add_argument("-p", "--port",
                         help="MQTT broker port",
-                        default=1883,
+                        default=None,
                         type=int,
                         required=False)
 
@@ -270,10 +288,41 @@ def main():
 
     args = parser.parse_args()
 
+    url = getattr(args, "url")
+    host = getattr(args, "broker")
+    port = getattr(args, "port")
+    username = None
+    password = None
+
+    if url and (host or port):
+        raise Exception("Specify url or specify host and port, not both")
+
+    if url:
+        mosquitto_url = urlparse(getattr(args, "url"))
+        host = mosquitto_url.hostname
+        port = mosquitto_url.port
+        if mosquitto_url.username and mosquitto_url.password:
+            username = mosquitto_url.username
+            password = mosquitto_url.password
+            if getattr(args, "auth"):
+                warn = (
+                    "OMMQTT warning "
+                    "You have specified both a username:password "
+                    "in the url AND an auth file, auth file %s "
+                    "will be ignored" % getattr(args, "auth")
+                )
+                syslog.syslog(warn)
+                logger.warning(warn)
+    else:
+        host = host if host else "localhost"
+        port = port if port else 1883
+
     global mqtt_options
     mqtt_options = {
-                    "host": getattr(args, "broker"),
-                    "port": getattr(args, "port"),
+                    "host": host,
+                    "port": port,
+                    "username": username,
+                    "password": password,
                     "topic": getattr(args, "topic"),
                     "qos": getattr(args, "qos"),
                     "severity": getattr(args, "severity"),
@@ -285,8 +334,7 @@ def main():
 
     poll_period = getattr(args, "poll")
     max_at_once = getattr(args, "messages")
-
-    syslog.syslog("OMMQTT start up poll={} messages={}".format(poll_period, max_at_once))
+    syslog.syslog("OMMQTT start up {}:{} poll={} messages={}".format(host, port, poll_period, max_at_once))
     on_init()
     keep_running = 1
     while keep_running == 1:

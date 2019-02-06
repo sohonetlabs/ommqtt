@@ -39,6 +39,7 @@ Uses the topic as the base topic and appends the severity label to the end.
 
     optional arguments:
       -h, --help            show this help message and exit
+      -u URL, --url URL     MQTT url (mqtts://user:password@host:8883)
       -b BROKER, --broker BROKER
                             MQTT broker
       -p PORT, --port PORT  MQTT broker port
@@ -56,6 +57,13 @@ Uses the topic as the base topic and appends the severity label to the end.
       -m MESSAGES, --messages MESSAGES
                             Max number of messages that are processed within one
                             batch from syslog
+
+### examples
+
+    python ommqtt/ommqtt.py -b host -p 8883
+    python ommqtt/ommqtt.py -b host -p 8883 -t "topic"
+    python ommqtt/ommqtt.py -u mqtts://user:password@host:8883 -t "topic"
+
 
 ## debugging
 

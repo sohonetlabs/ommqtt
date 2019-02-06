@@ -18,6 +18,8 @@ def test_MqttDestination():
     assert mqttdestination
     assert mqttdestination.host == "host"
     assert mqttdestination.port == 100
+    assert mqttdestination.username is None
+    assert mqttdestination.password is None
     assert mqttdestination.topic == "topic"
     assert mqttdestination._is_opened is False
     assert mqttdestination.debug == 0
@@ -33,13 +35,14 @@ def test_MqttDestination():
     ("1", 1, "1", 1),
     (None, 0, None, 0),
 ])
-@pytest.mark.parametrize("cert_path,auth_path", [
-    ("cert_path", "auth_path"),
-    (None, None),
+@pytest.mark.parametrize("cert_path,auth_path,username,password", [
+    ("cert_path", "auth_path", None, None),
+    ("cert_path", "auth_path", "username_arg", "password_arg"),
+    (None, None, None, None),
 ])
 def test_MqttDestination_init(
     debug, expected_debug, qos, expected_qos, cert_path, auth_path,
-    mocker
+    username, password, mocker
 ):
     mocker.patch("ommqtt.ommqtt.os")
     Client = mocker.patch("ommqtt.ommqtt.mqtt.Client")
@@ -60,6 +63,12 @@ def test_MqttDestination_init(
 
     if auth_path:
         options["auth_path"] = auth_path
+
+    if username:
+        options["username"] = username
+
+    if password:
+        options["password"] = password
 
     auth_data = json.dumps({"username": "username", "password": "password"})
     mock_open_data = mock.mock_open(read_data=auth_data)
@@ -86,9 +95,14 @@ def test_MqttDestination_init(
             mock.call.tls_set(ca_certs="cert_path", tls_version=2)
         )
     if auth_path:
-        expected_mock_calls.append(
-            mock.call.username_pw_set("username", "password")
-        )
+        if username:
+            expected_mock_calls.append(
+                mock.call.username_pw_set("username_arg", "password_arg")
+            )
+        else:
+            expected_mock_calls.append(
+                mock.call.username_pw_set("username", "password")
+            )
 
     assert mqttdestination.mqttc.mock_calls == expected_mock_calls
 
@@ -299,6 +313,7 @@ def test_MqttDestination_send_bad_publish(mocker):
 
 
 def test_MqttDestination_send_is_closed(mocker):
+    sleep = mocker.patch("ommqtt.ommqtt.time.sleep")
     mqttdestination = MqttDestination("host", "100", "topic")
     mqttdestination.mqttc = mock.Mock()
     mqttdestination._is_opened = False
@@ -309,6 +324,7 @@ def test_MqttDestination_send_is_closed(mocker):
     assert not mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     # make sure message is not sent
     assert mqttdestination.mqttc.mock_calls == []
+    assert sleep.mock_calls == [mock.call(2)]
 
 
 def test_MqttDestination_send_is_closed_but_does_open(mocker):
@@ -379,6 +395,7 @@ def test_main_single_messages(mocker):
     )
 
     class Args:
+        url = None
         broker = "broker"
         port = "port"
         topic = "topic"
@@ -406,8 +423,23 @@ def test_main_single_messages(mocker):
 
     main()
 
+    assert ommqtt.mqtt_options == {
+        "username": None,
+        "password": None,
+        "auth_path": None,
+        "cert_path": None,
+        "debug": 0,
+        "host": "broker",
+        "inflight_max": 10,
+        "open_wait": 2,
+        "port": "port",
+        "qos": 1,
+        "severity": 7,
+        "topic": "topic"
+    }
+
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -418,6 +450,271 @@ def test_main_single_messages(mocker):
     assert stdout.flush.mock_calls == [
         mock.call(), mock.call()
     ]
+
+
+def test_main_single_messages_with_mqtt_url_with_username_password(mocker):
+    stdout = mocker.patch(
+        "ommqtt.ommqtt.sys.stdout",
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.sys.stdin",
+        readline=mock.Mock(
+            side_effect=[
+                "message1",
+                "message2",
+                ""
+            ]
+        )
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.select.select",
+        return_value=[[sys.stdin]]
+    )
+
+    class Args:
+        url = "mqtts://user:password@urlhost:8883"
+        broker = None
+        port = None
+        topic = "topic"
+        qos = 1
+        severity = 7
+        cert = None
+        auth = None
+        inflight = 10
+        messages = 1
+        poll = 1
+        openwait = 2
+
+    mocker.patch(
+        "ommqtt.ommqtt.argparse.ArgumentParser",
+        return_value=mock.Mock(
+            parse_args=mock.Mock(
+                return_value=Args
+            )
+        )
+    )
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
+
+    main()
+
+    assert ommqtt.mqtt_options == {
+        "username": "user",
+        "password": "password",
+        "auth_path": None,
+        "cert_path": None,
+        "debug": 0,
+        "host": "urlhost",
+        "inflight_max": 10,
+        "open_wait": 2,
+        "port": 8883,
+        "qos": 1,
+        "severity": 7,
+        "topic": "topic"
+    }
+
+    assert syslog.mock_calls == [
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
+    ]
+    assert on_init.mock_calls == [mock.call()]
+    assert on_receive.mock_calls == [
+        mock.call(["message1"]),
+        mock.call(["message2"])
+    ]
+    assert on_exit.mock_calls == [mock.call()]
+    assert stdout.flush.mock_calls == [
+        mock.call(), mock.call()
+    ]
+
+
+def test_main_single_messages_with_mqtt_url_with_no_username_password(mocker):
+    stdout = mocker.patch(
+        "ommqtt.ommqtt.sys.stdout",
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.sys.stdin",
+        readline=mock.Mock(
+            side_effect=[
+                "message1",
+                "message2",
+                ""
+            ]
+        )
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.select.select",
+        return_value=[[sys.stdin]]
+    )
+
+    class Args:
+        url = "mqtts://urlhost:8883"
+        broker = None
+        port = None
+        topic = "topic"
+        qos = 1
+        severity = 7
+        cert = None
+        auth = None
+        inflight = 10
+        messages = 1
+        poll = 1
+        openwait = 2
+
+    mocker.patch(
+        "ommqtt.ommqtt.argparse.ArgumentParser",
+        return_value=mock.Mock(
+            parse_args=mock.Mock(
+                return_value=Args
+            )
+        )
+    )
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
+
+    main()
+
+    assert ommqtt.mqtt_options == {
+        "username": None,
+        "password": None,
+        "auth_path": None,
+        "cert_path": None,
+        "debug": 0,
+        "host": "urlhost",
+        "inflight_max": 10,
+        "open_wait": 2,
+        "port": 8883,
+        "qos": 1,
+        "severity": 7,
+        "topic": "topic"
+    }
+
+    assert syslog.mock_calls == [
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
+    ]
+    assert on_init.mock_calls == [mock.call()]
+    assert on_receive.mock_calls == [
+        mock.call(["message1"]),
+        mock.call(["message2"])
+    ]
+    assert on_exit.mock_calls == [mock.call()]
+    assert stdout.flush.mock_calls == [
+        mock.call(), mock.call()
+    ]
+
+
+def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mocker):
+    stdout = mocker.patch(
+        "ommqtt.ommqtt.sys.stdout",
+    )
+    logger = mocker.patch(
+        "ommqtt.ommqtt.logger",
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.sys.stdin",
+        readline=mock.Mock(
+            side_effect=[
+                "message1",
+                "message2",
+                ""
+            ]
+        )
+    )
+    mocker.patch(
+        "ommqtt.ommqtt.select.select",
+        return_value=[[sys.stdin]]
+    )
+
+    class Args:
+        url = "mqtts://user:password@urlhost:8883"
+        broker = None
+        port = None
+        topic = "topic"
+        qos = 1
+        severity = 7
+        cert = None
+        auth = "auth_path"
+        inflight = 10
+        messages = 1
+        poll = 1
+        openwait = 2
+
+    mocker.patch(
+        "ommqtt.ommqtt.argparse.ArgumentParser",
+        return_value=mock.Mock(
+            parse_args=mock.Mock(
+                return_value=Args
+            )
+        )
+    )
+    syslog = mocker.patch("ommqtt.ommqtt.syslog")
+    on_init = mocker.patch("ommqtt.ommqtt.on_init")
+    on_receive = mocker.patch("ommqtt.ommqtt.on_receive")
+    on_exit = mocker.patch("ommqtt.ommqtt.on_exit")
+
+    main()
+
+    assert ommqtt.mqtt_options == {
+        "username": "user",
+        "password": "password",
+        "auth_path": "auth_path",
+        "cert_path": None,
+        "debug": 0,
+        "host": "urlhost",
+        "inflight_max": 10,
+        "open_wait": 2,
+        "port": 8883,
+        "qos": 1,
+        "severity": 7,
+        "topic": "topic"
+    }
+
+    assert syslog.mock_calls == [
+        mock.call.syslog(
+            "OMMQTT warning You have specified both a username:password "
+            "in the url AND an auth file, auth file auth_path will be ignored"
+        ),
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
+    ]
+    assert on_init.mock_calls == [mock.call()]
+    assert on_receive.mock_calls == [
+        mock.call(["message1"]),
+        mock.call(["message2"])
+    ]
+    assert on_exit.mock_calls == [mock.call()]
+    assert stdout.flush.mock_calls == [
+        mock.call(), mock.call()
+    ]
+    assert logger.warning.mock_calls == [
+        mock.call(
+            "OMMQTT warning You have specified both a username:password "
+            "in the url AND an auth file, "
+            "auth file auth_path will be ignored"
+        )
+    ]
+
+
+def test_main_single_messages_with_bad_args(mocker):
+
+    class Args:
+        url = "mqtts://user:password@urlhost:8883"
+        broker = "broker"
+        port = 8883
+
+    mocker.patch(
+        "ommqtt.ommqtt.argparse.ArgumentParser",
+        return_value=mock.Mock(
+            parse_args=mock.Mock(return_value=Args)
+        )
+    )
+
+    with pytest.raises(Exception) as e:
+        main()
+
+    assert str(e.value) == "Specify url or specify host and port, not both"
 
 
 def test_main_multiple_messages(mocker):
@@ -443,6 +740,7 @@ def test_main_multiple_messages(mocker):
     )
 
     class Args:
+        url = None
         broker = "broker"
         port = "port"
         topic = "topic"
@@ -471,7 +769,7 @@ def test_main_multiple_messages(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=2")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=2")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -501,6 +799,7 @@ def test_main_no_messages(mocker):
     )
 
     class Args:
+        url = None
         broker = "broker"
         port = "port"
         topic = "topic"
@@ -529,7 +828,7 @@ def test_main_no_messages(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == []
@@ -557,6 +856,7 @@ def test_main_no_stdin(mocker):
     )
 
     class Args:
+        url = None
         broker = "broker"
         port = "port"
         topic = "topic"
@@ -585,5 +885,5 @@ def test_main_no_stdin(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]

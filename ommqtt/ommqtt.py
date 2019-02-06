@@ -24,6 +24,12 @@ import syslog
 import time
 
 import paho.mqtt.client as mqtt
+import six
+
+if six.PY3:  # pragma: no cover
+    from urllib.parse import urlparse   # pragma: no cover
+else:
+    from urllib2.urlparse import urlparse  # pragma: no cover
 
 # App logic global variables
 mqqt_dest = None
@@ -45,6 +51,8 @@ class MqttDestination(object):
             raise
 
         self.host = host
+        self.username = options.get("username")
+        self.password = options.get("password")
         self.topic = topic
         self.debug = int(options.get("debug", 0))
         self.qos = int(options.get("qos", 0))
@@ -69,7 +77,11 @@ class MqttDestination(object):
                     self.mqttc.tls_set(
                         tls_version=2, ca_certs=self.cert_path
                     )
-            if self.auth_path:
+            if self.username and self.password:
+                self.mqttc.username_pw_set(
+                    self.username, self.password
+                )
+            elif self.auth_path:
                 if not os.path.exists(self.auth_path):
                     syslog.syslog("Invalid auth path " + self.auth_path)
                     sys.exit(0)
@@ -206,6 +218,11 @@ def main():
 
     parser = argparse.ArgumentParser(description="rsyslog plugin to send to MQTT broker")
 
+    parser.add_argument("-u", "--url",
+                        help="MQTT full url (mqtts://user:password@host:8883)",
+                        default=None,
+                        required=False)
+
     parser.add_argument("-b", "--broker",
                         help="MQTT broker",
                         default="localhost",
@@ -270,10 +287,35 @@ def main():
 
     args = parser.parse_args()
 
+    url = getattr(args, "url")
+    host = getattr(args, "broker")
+    port = getattr(args, "port")
+    auth = None
+
+    if url and (host or port):
+        raise Exception("Specify url or specify host and port, not both")
+
+    if url:
+        mosquitto_url = urlparse(getattr(args, "url"))
+        host = mosquitto_url.hostname
+        port = mosquitto_url.port
+        if mosquitto_url.username and mosquitto_url.password:
+            auth = {
+                "username": mosquitto_url.username,
+                "password": mosquitto_url.password
+            }
+            if getattr(args, "auth"):
+                logger.warning(
+                    "You have specified both a username:password "
+                    "in the url AND an auth file, auth file %s "
+                    "will be ignored" % getattr(args, "auth")
+                )
+
     global mqtt_options
     mqtt_options = {
-                    "host": getattr(args, "broker"),
-                    "port": getattr(args, "port"),
+                    "host": host,
+                    "port": port,
+                    "auth": auth,
                     "topic": getattr(args, "topic"),
                     "qos": getattr(args, "qos"),
                     "severity": getattr(args, "severity"),

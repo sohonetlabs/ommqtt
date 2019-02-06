@@ -58,8 +58,10 @@ Uses the topic as the base topic and appends the severity label to the end.
                             Max number of messages that are processed within one
                             batch from syslog
 
-### example
+### examples
 
+    python ommqtt/ommqtt.py -b host -p 8883
+    python ommqtt/ommqtt.py -b host -p 8883 -t "topic"
     python ommqtt/ommqtt.py -u mqtts://user:password@host:8883 -t "topic"
 
 

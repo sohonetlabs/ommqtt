@@ -291,7 +291,8 @@ def main():
     url = getattr(args, "url")
     host = getattr(args, "broker")
     port = getattr(args, "port")
-    auth = None
+    username = None
+    password = None
 
     if url and (host or port):
         raise Exception("Specify url or specify host and port, not both")
@@ -301,10 +302,8 @@ def main():
         host = mosquitto_url.hostname
         port = mosquitto_url.port
         if mosquitto_url.username and mosquitto_url.password:
-            auth = {
-                "username": mosquitto_url.username,
-                "password": mosquitto_url.password
-            }
+            username = mosquitto_url.username
+            password = mosquitto_url.password
             if getattr(args, "auth"):
                 logger.warning(
                     "You have specified both a username:password "
@@ -319,7 +318,8 @@ def main():
     mqtt_options = {
                     "host": host,
                     "port": port,
-                    "auth": auth,
+                    "username": username,
+                    "password": password,
                     "topic": getattr(args, "topic"),
                     "qos": getattr(args, "qos"),
                     "severity": getattr(args, "severity"),

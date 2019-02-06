@@ -424,7 +424,8 @@ def test_main_single_messages(mocker):
     main()
 
     assert ommqtt.mqtt_options == {
-        "auth": None,
+        "username": None,
+        "password": None,
         "auth_path": None,
         "cert_path": None,
         "debug": 0,
@@ -500,10 +501,8 @@ def test_main_single_messages_with_mqtt_url_with_username_password(mocker):
     main()
 
     assert ommqtt.mqtt_options == {
-        "auth": {
-            "password": "password",
-            "username": "user"
-        },
+        "username": "user",
+        "password": "password",
         "auth_path": None,
         "cert_path": None,
         "debug": 0,
@@ -579,7 +578,8 @@ def test_main_single_messages_with_mqtt_url_with_no_username_password(mocker):
     main()
 
     assert ommqtt.mqtt_options == {
-        "auth": None,
+        "username": None,
+        "password": None,
         "auth_path": None,
         "cert_path": None,
         "debug": 0,
@@ -658,10 +658,8 @@ def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mock
     main()
 
     assert ommqtt.mqtt_options == {
-        "auth": {
-            "password": "password",
-            "username": "user"
-        },
+        "username": "user",
+        "password": "password",
         "auth_path": "auth_path",
         "cert_path": None,
         "debug": 0,

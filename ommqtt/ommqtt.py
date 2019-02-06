@@ -29,7 +29,8 @@ import six
 if six.PY3:  # pragma: no cover
     from urllib.parse import urlparse   # pragma: no cover
 else:
-    from urllib2.urlparse import urlparse  # pragma: no cover
+    from urllib2 import urlparse as urlparse_lib  # pragma: no cover
+    urlparse = urlparse_lib.urlparse  # pragma: no cover
 
 # App logic global variables
 mqqt_dest = None

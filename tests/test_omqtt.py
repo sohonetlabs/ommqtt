@@ -438,7 +438,7 @@ def test_main_single_messages(mocker):
     }
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -517,7 +517,7 @@ def test_main_single_messages_with_mqtt_url_with_username_password(mocker):
     }
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -593,7 +593,7 @@ def test_main_single_messages_with_mqtt_url_with_no_username_password(mocker):
     }
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -675,7 +675,7 @@ def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mock
     }
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up urlhost:8883 poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -767,7 +767,7 @@ def test_main_multiple_messages(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=2")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=2")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == [
@@ -826,7 +826,7 @@ def test_main_no_messages(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]
     assert on_init.mock_calls == [mock.call()]
     assert on_receive.mock_calls == []
@@ -883,5 +883,5 @@ def test_main_no_stdin(mocker):
     main()
 
     assert syslog.mock_calls == [
-        mock.call.syslog("OMMQTT start up poll=1 messages=1")
+        mock.call.syslog("OMMQTT start up broker:port poll=1 messages=1")
     ]

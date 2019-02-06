@@ -128,9 +128,9 @@ class MqttDestination(object):
                 return False
 
         if isinstance(msg["MESSAGE"], str):
-            decoded_msg = msg["MESSAGE"]
+            decoded_msg = msg["MESSAGE"].strip()
         else:
-            decoded_msg = msg["MESSAGE"].decode("utf-8")
+            decoded_msg = msg["MESSAGE"].decode("utf-8").strip()
         try:
             # parse the message and append the severity to the topic
             # see https://en.wikipedia.org/w/index.php?title=Syslog&section=4#Severity_level
@@ -219,18 +219,18 @@ def main():
     parser = argparse.ArgumentParser(description="rsyslog plugin to send to MQTT broker")
 
     parser.add_argument("-u", "--url",
-                        help="MQTT full url (mqtts://user:password@host:8883)",
+                        help="MQTT broker url (mqtts://user:password@host:8883)",
                         default=None,
                         required=False)
 
     parser.add_argument("-b", "--broker",
                         help="MQTT broker",
-                        default="localhost",
+                        default=None,
                         required=False)
 
     parser.add_argument("-p", "--port",
                         help="MQTT broker port",
-                        default=1883,
+                        default=None,
                         type=int,
                         required=False)
 
@@ -310,6 +310,9 @@ def main():
                     "in the url AND an auth file, auth file %s "
                     "will be ignored" % getattr(args, "auth")
                 )
+    else:
+        host = host if host else "localhost"
+        port = port if port else 1883
 
     global mqtt_options
     mqtt_options = {
@@ -327,8 +330,7 @@ def main():
 
     poll_period = getattr(args, "poll")
     max_at_once = getattr(args, "messages")
-
-    syslog.syslog("OMMQTT start up poll={} messages={}".format(poll_period, max_at_once))
+    syslog.syslog("OMMQTT start up {}:{} poll={} messages={}".format(host, port, poll_period, max_at_once))
     on_init()
     keep_running = 1
     while keep_running == 1:

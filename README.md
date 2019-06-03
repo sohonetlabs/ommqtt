@@ -9,7 +9,9 @@ example output
 
 ## Note
 
-Messages will get dropped until the network interface is up and running, and connection to MQTT broker is made
+Messages will get queued until the network interface is up and running, and the -i or --inflight messages limit is not reached, and will be delivered once the  connection to MQTT broker is made.
+
+Messages will be queued as according to the -i or --inflight messages option, default is 100 and for Ubuntu 18.04, we get all of the messages from boot, once the interface comes up.
 
 ## install
 You will need this lib in your system python, or setup a virtualenv to run it
@@ -22,7 +24,7 @@ or
 
 git clone this repo
 
-ommqtt.py needs to be owned by whatever rsyslog is runnign as ( syslog ) and executable
+ommqtt.py needs to be owned by whatever rsyslog is running as ( syslog ) and executable
 
     chmod +x ommqtt.py
     sudo chown syslog:syslog ommqtt.py

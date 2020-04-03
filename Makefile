@@ -1,3 +1,7 @@
+
+build_wheel:
+	python setup.py bdist_wheel
+
 run_ommqtt_system_tests:
 	echo '{"severity": "1"}' | python -m ommqtt.ommqtt
 	echo '{"severity": "2"}' | python -m ommqtt.ommqtt -p 1883
@@ -26,10 +30,11 @@ sync_requirements:
 	pip-sync requirements/requirements.txt requirements/test.txt --force
 
 lint:
-	flake8 ommqtt/ tests/
+	pycodestyle ommqtt/ tests/
 	isort --check-only --diff --recursive ommqtt/ tests/
 	unify --check-only --recursive --quote \" ommqtt/ tests/
 
 fix_lint:
+	autopep8 -v --in-place --recursive ommqtt tests
 	isort -y --recursive ommqtt/ tests/
 	unify --in-place --recursive --quote \" ommqtt/ tests/

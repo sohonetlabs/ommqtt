@@ -17,23 +17,16 @@ import argparse
 import json
 import logging
 import os
-import os.path
 import select
 import sys
 import syslog
 import time
+from urllib.parse import urlparse
 
 import paho.mqtt.client as mqtt
-import six
-
-if six.PY3:  # pragma: no cover
-    from urllib.parse import urlparse   # pragma: no cover
-else:
-    from urllib2 import urlparse as urlparse_lib  # pragma: no cover
-    urlparse = urlparse_lib.urlparse  # pragma: no cover
 
 # App logic global variables
-mqqt_dest = None
+mqtt_dest = None
 
 mqtt_options = None
 
@@ -319,18 +312,19 @@ def main():
 
     global mqtt_options
     mqtt_options = {
-                    "host": host,
-                    "port": port,
-                    "username": username,
-                    "password": password,
-                    "topic": getattr(args, "topic"),
-                    "qos": getattr(args, "qos"),
-                    "severity": getattr(args, "severity"),
-                    "cert_path": getattr(args, "cert"),
-                    "auth_path": getattr(args, "auth"),
-                    "inflight_max": getattr(args, "inflight"),
-                    "open_wait": getattr(args, "openwait"),
-                    "debug": 0}
+        "host": host,
+        "port": port,
+        "username": username,
+        "password": password,
+        "topic": getattr(args, "topic"),
+        "qos": getattr(args, "qos"),
+        "severity": getattr(args, "severity"),
+        "cert_path": getattr(args, "cert"),
+        "auth_path": getattr(args, "auth"),
+        "inflight_max": getattr(args, "inflight"),
+        "open_wait": getattr(args, "openwait"),
+        "debug": 0
+    }
 
     poll_period = getattr(args, "poll")
     max_at_once = getattr(args, "messages")
@@ -352,7 +346,10 @@ def main():
                     break
             if len(msgs) > 0:
                 on_receive(msgs)
-                sys.stdout.flush()  # very important, Python buffers far too much!
+                try:
+                    sys.stdout.flush()  # very important, Python buffers far too much!
+                except Exception:
+                    logger.exception("Could not flush sys.stdout")
     on_exit()
 
 

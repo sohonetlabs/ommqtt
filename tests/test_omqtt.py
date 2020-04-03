@@ -1,16 +1,11 @@
 import json
 import sys
+from unittest import mock
 
 import pytest
-import six
 
 from ommqtt import ommqtt
 from ommqtt.ommqtt import MqttDestination, main, on_exit, on_init, on_receive
-
-if six.PY3:
-    from unittest import mock
-else:
-    import mock
 
 
 def test_MqttDestination():
@@ -72,7 +67,7 @@ def test_MqttDestination_init(
 
     auth_data = json.dumps({"username": "username", "password": "password"})
     mock_open_data = mock.mock_open(read_data=auth_data)
-    _open = "builtins.open" if six.PY3 else "__builtin__.open"
+    _open = "builtins.open"
     with mock.patch(_open, mock_open_data):
         mqttdestination = MqttDestination("host", "100", "topic", **options)
 
@@ -239,7 +234,7 @@ def test_MqttDestination_send(msgdata, encode, mocker):
     if encode:
         mqttdestination.send({"MESSAGE": json.dumps(msgdata).encode("utf-8")})
     else:
-        mqttdestination.send({"MESSAGE": six.text_type(json.dumps(msgdata))})
+        mqttdestination.send({"MESSAGE": json.dumps(msgdata)})
 
     assert mqttdestination.mqttc.mock_calls == [
         mock.call.publish(
@@ -273,20 +268,12 @@ def test_MqttDestination_send_bad_json(mocker):
 
     # make sure message is not sent
     assert mqttdestination.mqttc.mock_calls == []
-    if six.PY3:
-        assert syslog.syslog.mock_calls == [
-            mock.call(
-                "Send format exception Expecting property name enclosed "
-                "in double quotes: line 1 column 2 (char 1)"
-            )
-        ]
-    else:
-        assert syslog.syslog.mock_calls == [
-            mock.call(
-                "Send format exception Expecting object: "
-                "line 1 column 1 (char 0)"
-            )
-        ]
+    assert syslog.syslog.mock_calls == [
+        mock.call(
+            "Send format exception Expecting property name enclosed "
+            "in double quotes: line 1 column 2 (char 1)"
+        )
+    ]
 
 
 def test_MqttDestination_send_bad_publish(mocker):
@@ -604,6 +591,45 @@ def test_main_single_messages_with_mqtt_url_with_no_username_password(mocker):
     assert stdout.flush.mock_calls == [
         mock.call(), mock.call()
     ]
+
+
+def test_main_flush_exception(mocker):
+    flush = mocker.patch("sys.stdout.flush", side_effect=Exception())
+    mocker.patch(
+        "ommqtt.ommqtt.sys.stdin",
+        readline=mock.Mock(side_effect=["message1", ""])
+    )
+    mocker.patch("ommqtt.ommqtt.select.select", return_value=[[sys.stdin]])
+
+    logger = mocker.patch("ommqtt.ommqtt.logger")
+
+    class Args:
+        url = "mqtts://urlhost:8883"
+        broker = None
+        port = None
+        topic = "topic"
+        qos = 1
+        severity = 7
+        cert = None
+        auth = None
+        inflight = 10
+        messages = 1
+        poll = 1
+        openwait = 2
+
+    mocker.patch(
+        "ommqtt.ommqtt.argparse.ArgumentParser",
+        return_value=mock.Mock(parse_args=mock.Mock(return_value=Args))
+    )
+    mocker.patch("ommqtt.ommqtt.syslog")
+    mocker.patch("ommqtt.ommqtt.on_init")
+    mocker.patch("ommqtt.ommqtt.on_receive")
+    mocker.patch("ommqtt.ommqtt.on_exit")
+
+    main()
+
+    assert flush.mock_calls == [mock.call()]
+    assert logger.exception.mock_calls == [mock.call("Could not flush sys.stdout")]
 
 
 def test_main_single_messages_with_mqtt_url_with_username_password_and_auth(mocker):

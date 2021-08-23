@@ -9,18 +9,22 @@ example output
 
 ## Note
 
-Messages will get queued until the network interface is up and running, and the -i or --inflight messages limit is not reached, and will be delivered once the  connection to MQTT broker is made.
+Messages will get queued until the network interface is up and running, and the -i or --inflight messages limit is not reached, and will be delivered once the  connection to an MQTT broker is made.
 
-Messages will be queued as according to the -i or --inflight messages option, default is 100 and for Ubuntu 18.04, we get all of the messages from boot, once the interface comes up.
+Messages will be queued as according to the -i or --inflight messages option (the default is 100), and for Ubuntu 18.04 we get all of the messages from boot once the interface comes up.
 
 ## install
-You will need this lib in your system python, or setup a virtualenv to run it
+You will need this lib in your system python, or a virtualenv setup to run it
 
     sudo pip install paho-mqtt
 
 or
 
     sudo apt install python-paho-mqtt
+
+or
+
+    sudo yum install python-paho-mqtt
 
 git clone this repo
 
